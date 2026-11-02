@@ -55,6 +55,13 @@ async function main() {
     assert.equal(await until("document.querySelector('.hero h1')?.textContent.includes('Сначала')"), true);
     await evalJS("document.querySelector('a[href=\"#lesson/sounds\"]').click()");
     assert.equal(await until("!!document.querySelector('[data-action=\"start-quiz\"]')"), true);
+    assert.equal(await evalJS("document.querySelector('#audio-speed').value"), 'slow');
+    assert.equal(await evalJS(`(() => {
+      const selector = document.querySelector('#audio-speed');
+      selector.value = 'slower';
+      selector.dispatchEvent(new Event('change', { bubbles: true }));
+      return localStorage.getItem('szep-szo-audio-speed-v1');
+    })()`), 'slower');
     assert.equal(await evalJS(`new Promise(resolve => {
       const phrase = document.querySelector('.sound').dataset.speak;
       const audio = new Audio(HU_AUDIO[phrase]);
@@ -63,6 +70,12 @@ async function main() {
       audio.onerror = () => resolve(false);
       audio.load();
     })`), true, 'recorded Hungarian voice should load in browser');
+    assert.equal(await evalJS(`(() => {
+      const NativeAudio = window.Audio;
+      window.Audio = function (...args) { window.testAudio = new NativeAudio(...args); return window.testAudio; };
+      document.querySelector('.sound').click();
+      return window.testAudio.playbackRate;
+    })()`), .68, 'sound button should play at selected slower speed');
     await evalJS("document.querySelector('[data-action=\"start-quiz\"]').click()");
     for (let index = 0; index < 4; index++) {
       assert.equal(await until("!!document.querySelector('.quiz-box')"), true);

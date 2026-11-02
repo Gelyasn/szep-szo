@@ -7,9 +7,14 @@
   const nav = document.querySelector('#nav');
   const mobileNav = document.querySelector('#mobile-nav');
   const storeKey = 'szep-szo-progress-v1';
+  const audioSpeedKey = 'szep-szo-audio-speed-v1';
+  const audioRates = { slower: .68, slow: .85, normal: 1 };
   let state;
   try { state = logic.restoreState(JSON.parse(localStorage.getItem(storeKey)), data.lessons); }
   catch { state = logic.initialState(); }
+  let audioSpeed = 'slow';
+  try { if (Object.hasOwn(audioRates, localStorage.getItem(audioSpeedKey))) audioSpeed = localStorage.getItem(audioSpeedKey); }
+  catch { /* Без localStorage скорость останется на значении по умолчанию. */ }
 
   const quizSession = new Map();
   let practice = { queue: [], current: 0, revealed: false, count: 0 };
@@ -35,6 +40,10 @@
 
   function speaker(text, className = '') {
     return `<button class="sound ${className}" type="button" data-speak="${escapeHTML(text)}" aria-label="Произнести ${escapeHTML(text)}" title="Слушать произношение">◖))</button>`;
+  }
+
+  function speedControl() {
+    return `<div class="audio-toolbar"><label for="audio-speed">Скорость произношения</label><select id="audio-speed" aria-label="Скорость произношения"><option value="slower" ${audioSpeed === 'slower' ? 'selected' : ''}>Очень медленно</option><option value="slow" ${audioSpeed === 'slow' ? 'selected' : ''}>Медленно</option><option value="normal" ${audioSpeed === 'normal' ? 'selected' : ''}>Обычно</option></select></div>`;
   }
 
   function intro(eyebrow, title, text, aside = '') {
@@ -119,6 +128,7 @@
     main.innerHTML = `<div class="content lesson-content">
       <a class="back-link" href="#lessons">← Все уроки</a>
       ${intro(`УРОК ${lesson.unit} <span class="eyebrow-divider">/</span> ~${lesson.minutes} МИН`, escapeHTML(lesson.title), escapeHTML(lesson.intro), `<div class="lesson-head-icon" aria-hidden="true">${lesson.icon}</div>`)}
+      ${speedControl()}
       <div class="lesson-layout"><div class="lesson-body">
         <div class="section-heading compact"><div><span class="section-kicker">РАЗБИРАЕМСЯ</span><h2>Правила без сложности</h2></div></div>
         <div class="rule-list">${lesson.rules.map((rule, i) => `<article class="rule-card"><span class="rule-index">0${i + 1}</span><div><h3>${escapeHTML(rule.title)}</h3><p>${escapeHTML(rule.text)}</p><div class="example"><div><strong lang="hu">${escapeHTML(rule.example)}</strong><small>${escapeHTML(rule.translation)}</small></div>${speaker(rule.example)}</div></div></article>`).join('')}</div>
@@ -160,7 +170,7 @@
     if (reset) practice = { queue: logic.cardsForPractice(state, data.lessons), current: 0, revealed: false, count: 0 };
     const stats = logic.practiceStats(state, data.lessons);
     const card = practice.queue[practice.current];
-    main.innerHTML = `<div class="content">${intro('КАРТОЧКИ СЛОВ', 'Повторение', 'Вспоминайте перевод до того, как открыть карточку. Слова вернутся через день, три дня и позже — как раз вовремя.', `<div class="head-counter"><strong>${stats.due}</strong><small>сейчас к повторению</small></div>`)}
+    main.innerHTML = `<div class="content">${intro('КАРТОЧКИ СЛОВ', 'Повторение', 'Вспоминайте перевод до того, как открыть карточку. Слова вернутся через день, три дня и позже — как раз вовремя.', `<div class="head-counter"><strong>${stats.due}</strong><small>сейчас к повторению</small></div>`)}${speedControl()}
       ${!stats.total ? `<div class="empty-state"><div class="empty-icon">✿</div><h2>Здесь скоро появятся слова</h2><p>Откройте любой урок — и его словарь станет доступен для повторения.</p><a class="button button-dark" href="#lesson/${data.lessons[0].id}">Открыть первый урок →</a></div>` : !card ? `<div class="empty-state"><div class="empty-icon">✳</div><h2>На сегодня всё!</h2><p>Вы повторили доступные карточки. Новые появятся позже — или откройте следующий урок.</p><a class="button button-dark" href="#lessons">К урокам →</a></div>` : `<div class="practice-wrap"><div class="practice-meta"><span>${escapeHTML(card.lesson)}</span><span>КАРТОЧКА ${practice.current + 1} / ${practice.queue.length}</span></div>
       <div class="flashcard"><span class="flash-overline">${practice.revealed ? 'ПЕРЕВОД' : 'КАК ПЕРЕВОДИТСЯ?'}</span><div class="flash-word" lang="hu">${escapeHTML(card.word)} ${speaker(card.word)}</div>${practice.revealed ? `<div class="flash-answer">${escapeHTML(card.translation)}</div>` : '<div class="flash-hint">Вспомните перевод, прежде чем открыть</div>'}<div class="flash-ornament" aria-hidden="true">✳ &nbsp; ✦ &nbsp; ✳</div></div>
       <div class="flash-actions">${practice.revealed ? `<button class="button button-outline" data-action="grade" data-value="again">Не вспомнила ↺</button><button class="button button-dark" data-action="grade" data-value="remembered">Вспомнила ✓</button>` : '<button class="button button-dark" data-action="reveal">Показать перевод →</button>'}</div><p class="practice-note">«Вспомнила» перенесёт слово на следующий день. «Не вспомнила» вернёт его через 10 минут.</p></div>`}
@@ -168,7 +178,7 @@
   }
 
   function renderReference() {
-    main.innerHTML = `<div class="content">${intro('БЫСТРАЯ ПОДСКАЗКА', 'Справочник', 'Правила и готовые фразы — всё под рукой. Нажимайте на значок звука, чтобы послушать произношение.')}
+    main.innerHTML = `<div class="content">${intro('БЫСТРАЯ ПОДСКАЗКА', 'Справочник', 'Правила и готовые фразы — всё под рукой. Нажимайте на значок звука, чтобы послушать произношение.')}${speedControl()}
       <div class="reference-grid"><div><div class="section-heading compact"><div><span class="section-kicker">ГРАММАТИКА В ДВУХ СЛОВАХ</span><h2>Опорные правила</h2></div></div>
       <div class="reference-rules">
         <article><span>01</span><div><h3>Произношение</h3><p>Ударение обычно на первом слоге. s ≈ ш, sz ≈ с, cs ≈ ч; ő и ű — долгие гласные.</p></div></article>
@@ -199,6 +209,7 @@
     const file = window.HU_AUDIO?.[text];
     if (file) {
       currentAudio = new Audio(file);
+      currentAudio.playbackRate = audioRates[audioSpeed];
       currentAudio.play().catch(() => toast('Не удалось воспроизвести запись. Проверьте звук и подключение.'));
       return;
     }
@@ -208,7 +219,7 @@
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'hu-HU';
     utterance.voice = voice;
-    utterance.rate = .82;
+    utterance.rate = audioRates[audioSpeed];
     speechSynthesis.speak(utterance);
   }
 
@@ -264,6 +275,14 @@
     if (event.target.id !== 'answer-form') return;
     event.preventDefault();
     answer(event.target.dataset.lesson, event.target.elements.answer.value);
+  });
+
+  main.addEventListener('change', event => {
+    if (event.target.id !== 'audio-speed' || !Object.hasOwn(audioRates, event.target.value)) return;
+    audioSpeed = event.target.value;
+    if (currentAudio) currentAudio.playbackRate = audioRates[audioSpeed];
+    try { localStorage.setItem(audioSpeedKey, audioSpeed); }
+    catch { /* Настройка останется до перезагрузки страницы. */ }
   });
 
   window.addEventListener('hashchange', () => render({ resetPractice: route().page === 'practice' }));

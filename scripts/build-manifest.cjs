@@ -13,7 +13,7 @@ const phrases = [
   ...data.phrases.flatMap(section => section.items.map(item => item[0]))
 ];
 const manifest = Object.fromEntries([...new Set(phrases)].map(text => [
-  text, `audio/${createHash('sha256').update(text).digest('hex').slice(0, 16)}.mp3`
+  text, `audio/v2/${createHash('sha256').update(text).digest('hex').slice(0, 16)}.mp3`
 ]));
 fs.writeFileSync(path.join(root, 'audio-manifest.js'), `// Создан автоматически: node scripts/build-manifest.cjs\nwindow.HU_AUDIO = ${JSON.stringify(manifest, null, 2)};\n`);
 if (process.argv[2]) fs.writeFileSync(process.argv[2], JSON.stringify(manifest, null, 2));
