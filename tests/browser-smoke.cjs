@@ -55,6 +55,13 @@ async function main() {
     assert.equal(await until("document.querySelector('.hero h1')?.textContent.includes('Сначала')"), true);
     await evalJS("document.querySelector('a[href=\"#lesson/sounds\"]').click()");
     assert.equal(await until("!!document.querySelector('[data-action=\"start-quiz\"]')"), true);
+    assert.equal(await evalJS(`new Promise(resolve => {
+      const phrase = document.querySelector('.sound').dataset.speak;
+      const audio = new Audio(HU_AUDIO[phrase]);
+      audio.onloadedmetadata = () => resolve(audio.duration > 0);
+      audio.onerror = () => resolve(false);
+      audio.load();
+    })`), true, 'recorded Hungarian voice should load in browser');
     await evalJS("document.querySelector('[data-action=\"start-quiz\"]').click()");
     for (let index = 0; index < 4; index++) {
       assert.equal(await until("!!document.querySelector('.quiz-box')"), true);

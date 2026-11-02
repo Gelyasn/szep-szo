@@ -14,6 +14,7 @@
   const quizSession = new Map();
   let practice = { queue: [], current: 0, revealed: false, count: 0 };
   let toastTimer;
+  let currentAudio;
 
   function save() {
     try { localStorage.setItem(storeKey, JSON.stringify(state)); }
@@ -175,7 +176,7 @@
         <article><span>03</span><div><h3>Где? Куда? Откуда?</h3><p>boltban — в магазине; boltba — в магазин; boltból — из магазина.</p></div></article>
         <article><span>04</span><div><h3>«Быть» в 3-м лице</h3><p>Ő tanár — он/она учитель (без van); Ő itt van — он/она здесь (с van).</p></div></article>
         <article><span>05</span><div><h3>Винительный падеж</h3><p>Прямое дополнение получает -t: kávé → kávét, víz → vizet.</p></div></article>
-      </div></div><aside class="reference-aside"><div class="aside-card"><span class="section-kicker">ПОМОЩЬ С ПРОИЗНОШЕНИЕМ</span><span class="aside-flower">◖))</span><p>Озвучивание работает через синтез речи вашего браузера. Если венгерского голоса нет, произношение может быть неточным.</p></div></aside></div>
+      </div></div><aside class="reference-aside"><div class="aside-card"><span class="section-kicker">ПОМОЩЬ С ПРОИЗНОШЕНИЕМ</span><span class="aside-flower">◖))</span><p>Все фразы и слова озвучены заранее. Нажмите на значок, чтобы послушать венгерское произношение — голос в системе не требуется.</p></div></aside></div>
       <div class="section-heading compact"><div><span class="section-kicker">ПОХОЖЕ НА НАСТОЯЩИЙ РАЗГОВОР</span><h2>Полезные фразы</h2></div></div>
       <div class="phrase-sections">${data.phrases.map(group => `<section class="phrase-group"><h3>${escapeHTML(group.category)}</h3>${group.items.map(([hu, ru]) => `<div class="phrase-row"><div><strong lang="hu">${escapeHTML(hu)}</strong><small>${escapeHTML(ru)}</small></div>${speaker(hu)}</div>`).join('')}</section>`).join('')}</div>
       <div class="bottom-note"><span>✳</span> Фразы о семье — примеры для практики. Рассказывайте о себе только то, что соответствует действительности.</div>
@@ -194,14 +195,20 @@
   }
 
   function speak(text) {
-    if (!('speechSynthesis' in window)) { toast('В этом браузере озвучивание недоступно.'); return; }
+    if (currentAudio) { currentAudio.pause(); currentAudio.currentTime = 0; }
+    const file = window.HU_AUDIO?.[text];
+    if (file) {
+      currentAudio = new Audio(file);
+      currentAudio.play().catch(() => toast('Не удалось воспроизвести запись. Проверьте звук и подключение.'));
+      return;
+    }
+    const voice = 'speechSynthesis' in window && speechSynthesis.getVoices().find(v => v.lang.toLowerCase().startsWith('hu'));
+    if (!voice) { toast('Для этой фразы нет записи.'); return; }
     speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'hu-HU';
+    utterance.voice = voice;
     utterance.rate = .82;
-    const voice = speechSynthesis.getVoices().find(v => v.lang.toLowerCase().startsWith('hu'));
-    if (voice) utterance.voice = voice;
-    else toast('Венгерский голос не найден: звучание может быть неточным.');
     speechSynthesis.speak(utterance);
   }
 

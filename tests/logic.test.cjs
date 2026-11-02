@@ -9,6 +9,8 @@ for (const file of ['data.js', 'logic.js']) {
   vm.runInContext(fs.readFileSync(path.join(__dirname, '..', file), 'utf8'), context);
 }
 const { HuLogic: logic, HU_DATA: data } = context;
+const audioContext = { window: {} };
+vm.runInNewContext(fs.readFileSync(path.join(__dirname, '..', 'audio-manifest.js'), 'utf8'), audioContext);
 
 test('12 lessons have rules, vocab and answerable questions', () => {
   assert.equal(data.lessons.length, 12);
@@ -53,4 +55,18 @@ test('cards are due immediately, then after 1/3 days; forgotten after 10 min', (
   logic.updateCard(state, 'sounds:0', false, 1000);
   assert.equal(state.cards['sounds:0'].due, 1000 + 600000);
   assert.equal(logic.practiceStats(state, data.lessons, 1000 + 600000).due, 6);
+});
+
+test('every speaking button has a real MP3 file', () => {
+  const expected = [
+    ...data.lessons.flatMap(lesson => [...lesson.rules.map(rule => rule.example), ...lesson.words.map(word => word[0])]),
+    ...data.phrases.flatMap(section => section.items.map(item => item[0]))
+  ];
+  const audio = audioContext.window.HU_AUDIO;
+  assert.equal(Object.keys(audio).length, new Set(expected).size);
+  for (const text of expected) {
+    assert.ok(audio[text], `No recording for ${text}`);
+    const file = path.join(__dirname, '..', audio[text]);
+    assert.ok(fs.statSync(file).size > 1000, `Empty recording for ${text}`);
+  }
 });
