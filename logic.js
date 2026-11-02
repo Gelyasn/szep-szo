@@ -9,6 +9,11 @@
       .replace(/[.!?…]+$/u, '').trim().replace(/\s+/gu, ' ');
   }
 
+  function hungarianTokens(value) {
+    return [...String(value).matchAll(/[A-Za-zÁÉÍÓÖŐÚÜŰáéíóöőúüű]+/gu)]
+      .map(match => match[0].toLocaleLowerCase('hu-HU'));
+  }
+
   function isCorrect(question, value) {
     const possible = question.answers || [question.answer];
     return possible.some(answer => normalizeAnswer(answer) === normalizeAnswer(value));
@@ -67,5 +72,5 @@
     return state.cards[key];
   }
 
-  root.HuLogic = { normalizeAnswer, isCorrect, initialState, restoreState, cardsForPractice, practiceStats, updateCard };
+  root.HuLogic = { normalizeAnswer, hungarianTokens, isCorrect, initialState, restoreState, cardsForPractice, practiceStats, updateCard };
 })(typeof window !== 'undefined' ? window : globalThis);

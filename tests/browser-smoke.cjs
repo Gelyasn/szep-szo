@@ -55,6 +55,8 @@ async function main() {
     assert.equal(await until("document.querySelector('.hero h1')?.textContent.includes('Сначала')"), true);
     await evalJS("document.querySelector('a[href=\"#lesson/sounds\"]').click()");
     assert.equal(await until("!!document.querySelector('[data-action=\"start-quiz\"]')"), true);
+    assert.equal(await evalJS("!!document.querySelector('.rule-card p .word-speak[data-speak=\"á\"]')"), true);
+    assert.equal(await evalJS("!!document.querySelector('.rule-card .example .word-speak[data-speak=\"köszönöm\"]')"), true);
     assert.equal(await evalJS("document.querySelector('#audio-speed').value"), 'slow');
     assert.equal(await evalJS(`(() => {
       const selector = document.querySelector('#audio-speed');
@@ -73,9 +75,10 @@ async function main() {
     assert.equal(await evalJS(`(() => {
       const NativeAudio = window.Audio;
       window.Audio = function (...args) { window.testAudio = new NativeAudio(...args); return window.testAudio; };
-      document.querySelector('.sound').click();
+      document.querySelector('.rule-card p .word-speak[data-speak="á"]').click();
       return window.testAudio.playbackRate;
     })()`), .68, 'sound button should play at selected slower speed');
+    assert.equal(await evalJS("window.testAudio.src.includes(HU_AUDIO['á'])"), true);
     await evalJS("document.querySelector('[data-action=\"start-quiz\"]').click()");
     for (let index = 0; index < 4; index++) {
       assert.equal(await until("!!document.querySelector('.quiz-box')"), true);
@@ -96,6 +99,14 @@ async function main() {
     await evalJS("document.querySelector('[data-value=\"remembered\"]').click()");
     assert.equal(await evalJS("Object.values(JSON.parse(localStorage.getItem('szep-szo-progress-v1')).cards).length"), 1);
     assert.equal(await evalJS("!!document.querySelector('.flash-answer')"), false);
+    await evalJS("location.hash = '#lesson/pronouns'");
+    assert.equal(await until("!!document.querySelector('.rule-card .word-speak[data-speak=\"ő\"]')"), true);
+    await evalJS("document.querySelector('[data-action=\"start-quiz\"]').click()");
+    assert.equal(await until("!!document.querySelector('.choice .word-speak[data-speak=\"ő\"]')"), true);
+    await evalJS("document.querySelector('.choice .word-speak[data-speak=\"ő\"]').click()");
+    assert.equal(await evalJS("!!document.querySelector('.feedback')"), false, 'playing a word must not submit an answer');
+    await evalJS("document.querySelector('.choice[data-value=\"Ő tanár.\"]').click()");
+    assert.equal(await until("!!document.querySelector('.feedback-ok')"), true);
     console.log('Browser smoke passed: урок, ответы, прогресс и карточки.');
   } finally {
     socket?.close();

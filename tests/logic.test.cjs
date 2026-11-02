@@ -34,6 +34,10 @@ test('answers ignore case, final punctuation and whitespace but retain accents',
   assert.equal(logic.isCorrect({ answer: 'Anna vagyok' }, ' ANNA   VAGYOK. '), true);
 });
 
+test('Hungarian tokens include accented letters without splitting words', () => {
+  assert.deepEqual(Array.from(logic.hungarianTokens('Ő itt van. · köszönöm szépen!')), ['ő', 'itt', 'van', 'köszönöm', 'szépen']);
+});
+
 test('restores only valid progress', () => {
   const raw = { visited: ['sounds', 'sounds', 'absent'], completed: { sounds: true, absent: true },
     cards: { 'sounds:0': { level: 2, due: 100 }, 'sounds:99': { level: 1, due: 5 }, 'absent:0': { level: 1, due: 5 } } };
@@ -57,13 +61,20 @@ test('cards are due immediately, then after 1/3 days; forgotten after 10 min', (
   assert.equal(logic.practiceStats(state, data.lessons, 1000 + 600000).due, 6);
 });
 
-test('every speaking button has a real MP3 file', () => {
-  const expected = [
+test('every spoken phrase and Hungarian word has a real MP3 file', () => {
+  const phrases = [
     ...data.lessons.flatMap(lesson => [...lesson.rules.map(rule => rule.example), ...lesson.words.map(word => word[0])]),
     ...data.phrases.flatMap(section => section.items.map(item => item[0]))
   ];
+  const content = data.lessons.flatMap(lesson => [
+    lesson.intro, lesson.title, lesson.subtitle,
+    ...lesson.rules.flatMap(rule => [rule.title, rule.text, rule.example, rule.translation]),
+    ...lesson.words.flat(),
+    ...lesson.quiz.flatMap(question => [question.prompt, question.explain, question.answer, ...(question.answers || []), ...(question.options || [])])
+  ]).concat(data.phrases.flatMap(section => [section.category, ...section.items.flat()]), ['Szia', 'szép szó', 'magyar nyelv']);
+  const expected = [...new Set([...phrases, ...content.filter(item => typeof item === 'string').flatMap(logic.hungarianTokens)])];
   const audio = audioContext.window.HU_AUDIO;
-  assert.equal(Object.keys(audio).length, new Set(expected).size);
+  assert.equal(Object.keys(audio).length, expected.length);
   for (const text of expected) {
     assert.ok(audio[text], `No recording for ${text}`);
     const file = path.join(__dirname, '..', audio[text]);
